@@ -1,0 +1,122 @@
+import re
+from pathlib import Path
+
+import fitz
+import docx
+import spacy
+
+from skills_data import SKILLS_DB, EDUCATION_KEYWORDS, EXPERIENCE_KEYWORDS
+
+EMAIL_PATTERN = r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+PHONE_PATTERN = r"(?:\+91[-\s]?)?[6-9]\d{9}"
+
+
+def load_nlp():
+    return spacy.load("en_core_web_sm")
+
+
+def extract_text_from_pdf(file_path):
+    text = []
+    with fitz.open(file_path) as pdf:
+        for page in pdf:
+            text.append(page.get_text())
+    return "\n".join(text)
+
+
+def extract_text_from_docx(file_path):
+    document = docx.Document(file_path)
+    text = [para.text for para in document.paragraphs]
+    return "\n".join(text)
+
+
+def extract_text(file_path):
+    file_path = Path(file_path)
+    suffix = file_path.suffix.lower()
+
+    if suffix == ".pdf":
+        return extract_text_from_pdf(file_path)
+    elif suffix == ".docx":
+        return extract_text_from_docx(file_path)
+    else:
+        raise ValueError("Only PDF and DOCX files are supported.")
+
+
+def clean_text(text):
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"[•|▪|●]", " ", text)
+    return text.strip()
+
+
+def extract_name(text, nlp):
+    doc = nlp(text[:1000])
+
+    for ent in doc.ents:
+        if ent.label_ == "PERSON" and len(ent.text.split()) <= 4:
+            return ent.text.title()
+
+    lines = text.split(".")
+    if lines:
+        first_line = lines[0].strip()
+        if 2 <= len(first_line.split()) <= 4:
+            return first_line.title()
+
+    return "Not found"
+
+
+def extract_email(text):
+    match = re.search(EMAIL_PATTERN, text)
+    return match.group(0) if match else "Not found"
+
+
+def extract_phone(text):
+    match = re.search(PHONE_PATTERN, text)
+    return match.group(0) if match else "Not found"
+
+
+def extract_skills(text):
+    text_lower = text.lower()
+    found_skills = []
+
+    for skill in SKILLS_DB:
+        if re.search(r"\b" + re.escape(skill) + r"\b", text_lower):
+            found_skills.append(skill.title())
+
+    return sorted(set(found_skills))
+
+
+def extract_education(text):
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    education_list = []
+
+    for sentence in sentences:
+        if any(keyword in sentence.lower() for keyword in EDUCATION_KEYWORDS):
+            education_list.append(sentence.strip())
+
+    return education_list[:10]
+
+
+def extract_experience(text):
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    experience_list = []
+
+    for sentence in sentences:
+        if any(keyword in sentence.lower() for keyword in EXPERIENCE_KEYWORDS):
+            experience_list.append(sentence.strip())
+
+    return experience_list[:10]
+
+
+def parse_resume(file_path, nlp):
+    raw_text = extract_text(file_path)
+    cleaned_text = clean_text(raw_text)
+
+    return {
+        "file_name": Path(file_path).name,
+        "name": extract_name(cleaned_text, nlp),
+        "email": extract_email(cleaned_text),
+        "phone": extract_phone(cleaned_text),
+        "skills": extract_skills(cleaned_text),
+        "education": extract_education(cleaned_text),
+        "experience": extract_experience(cleaned_text),
+        "raw_text_preview": cleaned_text[:500] + "..." if len(cleaned_text) > 500 else cleaned_text
+}

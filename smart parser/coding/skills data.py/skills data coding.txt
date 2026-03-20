@@ -1,0 +1,21 @@
+SKILLS_DB = [
+    "python", "java", "c", "c++", "html", "css", "javascript", "sql",
+    "machine learning", "deep learning", "data analysis", "data science",
+    "pandas", "numpy", "matplotlib", "power bi", "excel", "streamlit",
+    "flask", "django", "nlp", "spacy", "tensorflow", "pytorch",
+    "git", "github", "mysql", "mongodb", "opencv", "communication",
+    "problem solving", "teamwork", "leadership", "time management",
+    "critical thinking", "data visualization", "computer vision"
+]
+
+EDUCATION_KEYWORDS = [
+    "b.e", "b.tech", "m.e", "m.tech", "b.sc", "m.sc", "bca", "mca",
+    "b.com", "mba", "degree", "university", "college", "school",
+    "higher secondary", "sslc", "hsc", "engineering"
+]
+
+EXPERIENCE_KEYWORDS = [
+    "experience", "internship", "intern", "project", "worked",
+    "developer", "engineer", "analyst", "responsibilities",
+    "employment", "company", "role"
+]
